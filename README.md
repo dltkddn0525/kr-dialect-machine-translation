@@ -31,3 +31,6 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
 ### TODO
 - validation code in main.py
 - Test code(inference)
+
+### Reference
+- <href>https://github.com/ndb796/Deep-Learning-Paper-Review-and-Practice/blob/master/code_practices/Attention_is_All_You_Need_Tutorial_(German_English).ipynb
