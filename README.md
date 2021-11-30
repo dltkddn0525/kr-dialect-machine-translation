@@ -29,4 +29,4 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
 
 ### TODO
 - validation code in main.py
-- Test code
+- Test code(inference)
