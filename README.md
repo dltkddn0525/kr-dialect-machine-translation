@@ -26,6 +26,7 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
 --data-dir <path to data> \
 --save-path <path to save model & log>
 ```
+- `data-dir` : `bpe.model` must be in this path.
 
 ### TODO
 - validation code in main.py
