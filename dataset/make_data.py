@@ -18,5 +18,10 @@ def make_data(data_c, data_j, data_k, data_z):
     return data 
 
 
+data1 = ' '
+data2 = ' '
+data3 = ' '
+data4 = ' ' 
+
 data  = make_data(data1, data2, data3, data4)
 data.to_csv('train.csv')
