@@ -12,14 +12,16 @@ from model import Transformer, Encoder, Decoder
 from utils import AverageMeter, Logger
 
 parser = argparse.ArgumentParser(description='Transformer dialect machine translation')
-parser.add_argument('--data-dir', default='/nas/datahub/kr-dialect',type=str,
+parser.add_argument('--data-dir', default='/nas/datahub/kr-dialect/dataset',type=str,
                     help='path to data of specific domain')
 parser.add_argument('--save-path', default='./result',type=str,
                     help='Save path')
 parser.add_argument('--batch-size', default=256,type=int,
                     help='batch size')
-parser.add_argument('--epoch', default=100,type=int,
+parser.add_argument('--epoch', default=50,type=int,
                     help='Number of Training Epoch')
+parser.add_argument('--vocab-size', default=4000,type=int,
+                    help='vocab size')
 parser.add_argument('--hidden-dim', default=256,type=int,
                     help='Token Embedding Dimension')
 parser.add_argument('--enc-layer', default=6,type=int,
@@ -45,12 +47,20 @@ def main():
 
     # Load Data
     sp = spm.SentencePieceProcessor()
-    sp.Load(f'{args.data_dir}/bpe.model')
-    dataset = NMTDataset(args.data_dir,sp,'train')
-    loader = DataLoader(
-        dataset,
+    sp.Load(f'{args.data_dir}/bpe_{args.vocab_size}.model')
+    train_dataset = NMTDataset(args.data_dir,sp,'train')
+    val_dataset = NMTDataset(args.data_dir,sp,'val')
+    train_loader = DataLoader(
+        train_dataset,
         batch_size=args.batch_size,
         shuffle=True,
+        collate_fn=collate_fn,
+        num_workers=4,
+        pin_memory=True)
+    val_loader = DataLoader(
+        val_dataset,
+        batch_size=args.batch_size,
+        shuffle=False,
         collate_fn=collate_fn,
         num_workers=4,
         pin_memory=True)
@@ -84,6 +94,7 @@ def main():
         sp.pad_id(),
         device
     ).to(device)
+    model.apply(initialize_weights)
 
     # Loss & Optimizer
     criterion = nn.CrossEntropyLoss(ignore_index=sp.pad_id())
@@ -93,9 +104,10 @@ def main():
     train_logger = Logger(os.path.join(save_path,'train.log'))
     val_logger = Logger(os.path.join(save_path, 'val.log'))
 
-    # Train
+    # Train & validate
     for epoch in range(args.epoch):
-        train(model,loader,optimizer,criterion,train_logger,epoch,device)
+        train(model,train_loader,optimizer,criterion,train_logger,epoch,device)
+        validate(model,val_loader,criterion,val_logger,epoch,device)
 
     # Save Model
     torch.save(model.state_dict(),os.path.join(save_path,'last_model.pth'))
@@ -108,8 +120,8 @@ def train(model,loader,optimizer,criterion,train_logger,epoch,device):
     data_time = AverageMeter()
 
     end = time.time()
-    for i,(src,tgt) in enumerate(loader):
-        src,tgt = src.to(device), tgt.to(device)
+    for i,(src,tgt,label) in enumerate(loader):
+        src,tgt,label = src.to(device), tgt.to(device),label.to(device)
         data_time.update(time.time()-end)
 
         optimizer.zero_grad()
@@ -133,6 +145,24 @@ def train(model,loader,optimizer,criterion,train_logger,epoch,device):
             Data Time : {data_time.avg:.4f}")
 
     train_logger.write([epoch,train_loss.avg,iter_time.avg,data_time.avg])
+
+def validate(model,loader,criterion,val_logger,epoch,device):
+    model.eval()
+
+    val_loss = AverageMeter()
+    end = time.time()
+    with torch.no_grad():
+        for i,(src,tgt,label) in enumerate(loader):
+            src,tgt,label = src.to(device), tgt.to(device),label.to(device)
+            output, _ = model(src,tgt[:,:-1]) # Output is prediction for each token except the last one
+            output_dim = output.shape[-1]
+            output= output.contiguous().view(-1, output_dim)
+            tgt = tgt[:,1:].contiguous().view(-1)
+            loss = criterion(output,tgt)
+            val_loss.update(loss.item(),src.size(0))
+
+    print(f"\n Epoch : [{epoch+1}]/[{args.epoch}] Validation Loss : {val_loss.avg:.4f} \n")
+    val_logger.write([epoch,val_loss.avg])
 
 
 def initialize_weights(m):

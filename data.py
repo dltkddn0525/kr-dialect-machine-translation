@@ -9,7 +9,7 @@ import sentencepiece as spm
 import codecs
 
 class NMTDataset(Dataset):
-    def __init__(self, data_dir, sp, mode, src='standard_form',max_len=500):
+    def __init__(self, data_dir, sp, mode, src='dialect_form'):
         super(NMTDataset,self).__init__()
 
         if src == 'standard_form':
@@ -22,17 +22,18 @@ class NMTDataset(Dataset):
         self.df = pd.read_csv(f"{data_dir}/{mode}.csv", encoding='utf-8')
         src_list = self.df[src].values.tolist()
         tgt_list = self.df[tgt].values.tolist()
+        self.location_label = self.df['label'].values.tolist()
 
         self.sp = sp
         self.bos_id = self.sp.bos_id()
         self.eos_id = self.sp.eos_id()
         self.pad_id = self.sp.pad_id()
-        self.max_len = max_len
 
         self.src_data = self.get_tokenized_docs(src_list)
         self.tgt_data = self.get_tokenized_docs(tgt_list)
 
         self.token_to_idx,self.idx_to_token = self.get_vocab()
+        
         
     def get_vocab(self):
         token_to_idx = {}
@@ -52,12 +53,6 @@ class NMTDataset(Dataset):
                 torch.tensor(seq),
                 torch.tensor([self.eos_id])
             ))
-            # seq = [self.bos_id] + seq + [self.eos_id]
-            # if len(seq)> self.max_len:
-            #     import ipdb;ipdb.set_trace()
-            # rest = self.max_len - len(seq)
-            # seq = torch.tensor(seq + [self.pad_id]*rest)
-
             tokenized_docs.append(seq)
         return tokenized_docs
     
@@ -67,17 +62,19 @@ class NMTDataset(Dataset):
     def __getitem__(self,idx):
         src = self.src_data[idx]
         tgt = self.tgt_data[idx]
+        label = self.location_label[idx]
 
-        return src, tgt
+        return src, tgt, torch.tensor(label)
 
 def collate_fn(batch):
-    src_batch = [src for src,tgt in batch]
-    tgt_batch = [tgt for src,tgt in batch]
+    src_batch = [src for src,tgt,label in batch]
+    tgt_batch = [tgt for src,tgt,label in batch]
+    label_batch = [label for src,tgt,label in batch]
     
     src_batch = pad_sequence(src_batch, batch_first=True, padding_value=3)
     tgt_batch = pad_sequence(tgt_batch, batch_first=True, padding_value=3)
 
-    return src_batch, tgt_batch
+    return src_batch, tgt_batch, torch.tensor(label_batch)
 
 if __name__ == '__main__':
     # Check dataloader
@@ -85,7 +82,7 @@ if __name__ == '__main__':
     sp = spm.SentencePieceProcessor()
     sp.Load(f'{data_dir}/bpe.model')
     
-    dataset = NMTDataset(data_dir,sp,mode='train')
+    dataset = NMTDataset(data_dir,sp,mode='val')
     loader = DataLoader(dataset,batch_size=2,shuffle=True,collate_fn=collate_fn)
-    src,tgt = next(iter(loader))
+    src,tgt,label = next(iter(loader))
     import ipdb;ipdb.set_trace()
