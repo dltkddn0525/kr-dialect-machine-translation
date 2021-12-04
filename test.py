@@ -12,26 +12,27 @@ from utils import AverageMeter, Logger
 parser = argparse.ArgumentParser(description='Transformer dialect machine translation')
 parser.add_argument('--data-dir', default='/nas/datahub/kr-dialect',type=str,
                     help='path to data of specific domain')
-parser.add_argument('--save-path', default='./result',type=str,
-                    help='Save path')
-parser.add_argument('--ckpt', default='./result/mode.pth',type=str,
+parser.add_argument('--ckpt', default='./trial1/last_model.pth',type=str,
                     help='Save path')
 args = parser.parse_args()
 
 def main():
 
+    # Get configuration
+    config_path = os.path.join(os.path.dirname(args.ckpt),'configuration.json')
+    with open(config_path,'r') as f:
+        config = json.load(f)
+
     # Load Dataset
     sp = spm.SentencePieceProcessor()
-    sp.Load(f'{args.data_dir}/bpe.model')
+    sp.Load(f'{args.data_dir}/bpe_{config['vocab_size']}.model')
     val_dataset = NMTDataset(args.data_dir,sp,'val')
     test_dataset = NMTDataset(args.data_dir,sp,'test')
 
     # Load Model
     device = torch.device('cuda:0')
     num_vocab = sp.get_piece_size()
-    config_path = os.path.join(os.path.dirname(args.ckpt),'configuration.json')
-    with open(config_path,'r') as f:
-        config = json.load(f)
+
 
     encoder = Encoder(
         input_dim=num_vocab, 
@@ -58,7 +59,8 @@ def main():
         device
     ).to(device)
 
-    # load check point
+    ckpt = torch.load(args.ckpt)
+    model.load_state_dict(ckpt)
 
     val_perf = evaluate(model,val_dataset,sp,device)
     test_perf = evaluate(model,test_dataset,sp,device)
@@ -89,7 +91,7 @@ def evaluate(model,dataset,sp,device):
             tgt_indices = [dataset.bos_id]
 
             # Generate sequence iteratively
-            for i in range(100):
+            for i in range(500):
                 tgt_tensor = torch.LongTensor(tgt_indices).unsqueeze(0).to(device)
 
                 tgt_mask = model.make_tgt_mask(tgt_tensor)
