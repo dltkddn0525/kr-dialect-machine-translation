@@ -104,7 +104,10 @@ def evaluate(model,dataset,sp,device):
                     break
             
             translate = sp.id_to_piece(tgt_indices[1:])
+            # Without location info
             copy = sp.id_to_piece(src[0].tolist()[1:-1])
+            # With location info : second token is location token
+            # copy = sp.id_to_piece(src[0].tolist()[2:-1])
             ground_truth = sp.id_to_piece(tgt.tolist()[1:-1])
 
             translates.append(translate)
