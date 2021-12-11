@@ -4,21 +4,22 @@ import json
 import torch
 import torch.nn as nn
 import time
+import numpy as np
 import sentencepiece as spm
 from torch.utils.data import DataLoader
 
 from data import NMTDataset, collate_fn
 from model import Transformer, Encoder, Decoder
-from utils import AverageMeter, Logger
+from utils import AverageMeter, Logger, str2bool
 
 parser = argparse.ArgumentParser(description='Transformer dialect machine translation')
 parser.add_argument('--data-dir', default='/nas/datahub/kr-dialect/dataset',type=str,
                     help='path to data of specific domain')
 parser.add_argument('--save-path', default='./result',type=str,
                     help='Save path')
-parser.add_argument('--batch-size', default=256,type=int,
+parser.add_argument('--batch-size', default=128,type=int,
                     help='batch size')
-parser.add_argument('--epoch', default=50,type=int,
+parser.add_argument('--epoch', default=30,type=int,
                     help='Number of Training Epoch')
 parser.add_argument('--vocab-size', default=4000,type=int,
                     help='vocab size')
@@ -32,6 +33,8 @@ parser.add_argument('--enc-head', default=8,type=int,
                     help='Number of attention head in encoder layer')
 parser.add_argument('--dec-head', default=8,type=int,
                     help='Number of attention head in decoder layer')
+parser.add_argument('--use-loc', default=False,type=str2bool,
+                    help='Whether to use location information')
 args = parser.parse_args()
 
 def main():
@@ -48,8 +51,18 @@ def main():
     # Load Data
     sp = spm.SentencePieceProcessor()
     sp.Load(f'{args.data_dir}/bpe_{args.vocab_size}.model')
-    train_dataset = NMTDataset(args.data_dir,sp,'train')
-    val_dataset = NMTDataset(args.data_dir,sp,'val')
+    train_dataset = NMTDataset(
+        args.data_dir,
+        sp,
+        'train',
+        use_loc=args.use_loc
+    )
+    val_dataset = NMTDataset(
+        args.data_dir,
+        sp,
+        'val',
+        use_loc=args.use_loc
+    )
     train_loader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,
@@ -67,7 +80,11 @@ def main():
     
     # Create Model
     device = torch.device('cuda:0')
-    num_vocab = sp.get_piece_size()
+    num_location = len(np.unique(val_dataset.location_label))
+    if args.use_loc:
+        num_vocab = sp.get_piece_size()+num_location
+    else:
+        num_vocab = sp.get_piece_size()
 
     encoder = Encoder(
         input_dim=num_vocab, 

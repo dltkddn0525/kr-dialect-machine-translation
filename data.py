@@ -9,7 +9,7 @@ import sentencepiece as spm
 import codecs
 
 class NMTDataset(Dataset):
-    def __init__(self, data_dir, sp, mode, src='dialect_form'):
+    def __init__(self, data_dir, sp, mode, src='dialect_form',use_loc=False):
         super(NMTDataset,self).__init__()
 
         if src == 'standard_form':
@@ -18,8 +18,9 @@ class NMTDataset(Dataset):
             tgt = 'standard_form'
         else:
             raise NotImplementedError
-        
+
         self.df = pd.read_csv(f"{data_dir}/{mode}.csv", encoding='utf-8')
+
         src_list = self.df[src].values.tolist()
         tgt_list = self.df[tgt].values.tolist()
         self.location_label = self.df['label'].values.tolist()
@@ -29,8 +30,8 @@ class NMTDataset(Dataset):
         self.eos_id = self.sp.eos_id()
         self.pad_id = self.sp.pad_id()
 
-        self.src_data = self.get_tokenized_docs(src_list)
-        self.tgt_data = self.get_tokenized_docs(tgt_list)
+        self.src_data = self.get_tokenized_docs(src_list,use_loc=use_loc)
+        self.tgt_data = self.get_tokenized_docs(tgt_list,use_loc=False)
 
         self.token_to_idx,self.idx_to_token = self.get_vocab()
         
@@ -44,15 +45,25 @@ class NMTDataset(Dataset):
             token_to_idx[token] = id_
         return token_to_idx,idx_to_token
 
-    def get_tokenized_docs(self,text_list):
+    def get_tokenized_docs(self,text_list,use_loc=False):
         tokenized_docs = []
-        for txt in text_list:
+        for i in range(len(text_list)):
+            txt = text_list[i]
             seq = self.sp.encode_as_ids(txt)
-            seq = torch.cat((
-                torch.tensor([self.bos_id]),
-                torch.tensor(seq),
-                torch.tensor([self.eos_id])
-            ))
+            label_token = self.location_label[i]+self.sp.get_piece_size()
+            if use_loc:
+                seq = torch.cat((
+                    torch.tensor([self.bos_id]),
+                    torch.tensor([label_token]),
+                    torch.tensor(seq),
+                    torch.tensor([self.eos_id])
+                ))
+            else:
+                seq = torch.cat((
+                    torch.tensor([self.bos_id]),
+                    torch.tensor(seq),
+                    torch.tensor([self.eos_id])
+                ))
             tokenized_docs.append(seq)
         return tokenized_docs
     
@@ -75,14 +86,3 @@ def collate_fn(batch):
     tgt_batch = pad_sequence(tgt_batch, batch_first=True, padding_value=3)
 
     return src_batch, tgt_batch, torch.tensor(label_batch)
-
-if __name__ == '__main__':
-    # Check dataloader
-    data_dir = '/nas/datahub/kr-dialect'
-    sp = spm.SentencePieceProcessor()
-    sp.Load(f'{data_dir}/bpe.model')
-    
-    dataset = NMTDataset(data_dir,sp,mode='val')
-    loader = DataLoader(dataset,batch_size=2,shuffle=True,collate_fn=collate_fn)
-    src,tgt,label = next(iter(loader))
-    import ipdb;ipdb.set_trace()
