@@ -1,10 +1,17 @@
-import pandas as pd 
+import pandas as pd
+import argparse
 import json
 import os
 import re
 
 
 # label  {'chung' : 0, 'junla' :1, 'kyung' :2, 'zeju' : 3}
+
+parser = argparse.ArgumentParser(description='Transformer dialect machine translation')
+parser.add_argument('--data-dir', default=' ',type=str,
+                    help='path to data of specific domain')
+args = parser.parse_args()
+
 
 def preprocess(path):
     file_list = os.listdir(path)
@@ -54,9 +61,8 @@ def preprocess(path):
     return tr, val, test
 
 
-path = ' '
-
-tr, val, test = preprocess(path)    
+path = args.data-dir
+tr, val, test = preprocess()    
 
 tr.to_csv('train.csv')
 val.to_csv('val.csv')
