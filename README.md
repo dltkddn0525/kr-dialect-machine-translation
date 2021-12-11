@@ -1,6 +1,6 @@
 # kr-dialect-machine-translation
 
-1, Make data
+1. Make data
 
 ```
 python make_data.py 
