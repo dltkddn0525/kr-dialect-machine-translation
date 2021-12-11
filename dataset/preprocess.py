@@ -60,3 +60,4 @@ tr, val, test = preprocess(path)
 
 tr.to_csv('train.csv')
 val.to_csv('val.csv')
+test.to_csv('test.csv')
