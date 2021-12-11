@@ -3,7 +3,7 @@
 1. Make data
 
 ```
-python make_data.py 
+python make_data.py --data <path to data>
 ```
 
 - data dir
