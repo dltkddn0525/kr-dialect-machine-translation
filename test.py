@@ -12,7 +12,7 @@ from utils import AverageMeter, Logger
 
 parser = argparse.ArgumentParser(description='Transformer dialect machine translation')
 parser.add_argument('--data-dir', default='/nas/datahub/kr-dialect/dataset',type=str,
-                    help='path to data of specific domain')
+                    help='path to dataset directory')
 parser.add_argument('--ckpt', default='./trial1/last_model.pth',type=str,
                     help='Save path')
 args = parser.parse_args()
