@@ -9,7 +9,7 @@ import re
 
 parser = argparse.ArgumentParser(description='Transformer dialect machine translation')
 parser.add_argument('--data', default='/nas/home/sungchul/dia/chung_train/val',type=str,
-                    help='path to data of specific domain')
+                    help='path to dataset directory')
 
 
 
