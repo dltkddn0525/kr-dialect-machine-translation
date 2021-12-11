@@ -9,7 +9,7 @@ import pickle
 
 parser = argparse.ArgumentParser(description='Transformer dialect machine translation')
 parser.add_argument('--data-dir', default='/nas/datahub/kr-dialect/dataset',type=str,
-                    help='path to data of specific domain')
+                    help='path to dataset directory')
 parser.add_argument('--vocab-size', default=4000,type=int,
                     help='Vocab Size')
 args = parser.parse_args()
