@@ -8,9 +8,9 @@ import re
 # label  {'chung' : 0, 'junla' :1, 'kyung' :2, 'zeju' : 3}
 
 parser = argparse.ArgumentParser(description='Transformer dialect machine translation')
-parser.add_argument('--data-dir', default=' ',type=str,
+parser.add_argument('--data', default='/nas/home/sungchul/dia/chung_train/val',type=str,
                     help='path to data of specific domain')
-args = parser.parse_args()
+
 
 
 def preprocess(path):
@@ -60,10 +60,12 @@ def preprocess(path):
 
     return tr, val, test
 
+if __name__ == '__main__':
+    args = parser.parse_args() 
+    path = args.data
 
-path = args.data-dir
-tr, val, test = preprocess()    
+    tr, val, test = preprocess(path)    
 
-tr.to_csv('train.csv')
-val.to_csv('val.csv')
-test.to_csv('test.csv')
+    tr.to_csv('train.csv')
+    val.to_csv('val.csv')
+    test.to_csv('test.csv')
